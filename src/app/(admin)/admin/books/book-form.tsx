@@ -236,10 +236,12 @@ export function BookForm({ book }: { book?: BookWithFormats }) {
       />
 
       <div className="sticky bottom-0 -mx-4 border-t border-admin-border bg-admin-surface px-4 py-3">
+        {/* text-admin-on-dark! — `!` needed to beat globals.css's unlayered
+            `:where(button){ color: inherit }`. */}
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded bg-admin-ink px-4 py-3 text-sm font-medium text-admin-surface disabled:opacity-60 sm:w-auto"
+          className="w-full rounded bg-admin-ink px-4 py-3 text-sm font-medium text-admin-on-dark! disabled:opacity-60 sm:w-auto"
         >
           {pending
             ? "Saving…"

@@ -13,6 +13,7 @@
     "db:migrate:test": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed:admin": "tsx prisma/seed-admin.ts",
+    "db:seed:books": "tsx prisma/seed-books.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

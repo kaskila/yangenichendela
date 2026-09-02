@@ -272,6 +272,43 @@ export function getBookForAdmin(id: string): Promise<BookWithFormats | null> {
   return db.book.findUnique({ where: { id }, include: { formats: true } });
 }
 
+/** Public catalogue: published books only, in the author's chosen order. */
+export function listPublishedBooks(): Promise<BookWithFormats[]> {
+  return db.book.findMany({
+    where: { published: true },
+    include: { formats: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+/**
+ * Public detail page. Returns null for an unknown slug OR a draft — a draft
+ * must not be reachable by guessing the URL.
+ */
+export function getPublishedBookBySlug(
+  slug: string,
+): Promise<BookWithFormats | null> {
+  return db.book.findFirst({
+    where: { slug, published: true },
+    include: { formats: true },
+  });
+}
+
+/** Formats a buyer can currently choose. Availability is `isAvailable`; stock
+ *  (a PRINT format at 0) is a separate signal the detail page handles. */
+export function availableFormats(book: BookWithFormats): BookFormat[] {
+  return book.formats.filter((f) => f.isAvailable);
+}
+
+/** The lowest available format, for the catalogue "from …" price. Null when a
+ *  published book has nothing for sale yet. */
+export function cheapestAvailableFormat(book: BookWithFormats): BookFormat | null {
+  return availableFormats(book).reduce<BookFormat | null>(
+    (lowest, f) => (lowest === null || f.priceMinor < lowest.priceMinor ? f : lowest),
+    null,
+  );
+}
+
 // --- writes --------------------------------------------------------
 
 export async function createBook(draft: BookDraft): Promise<BookWriteResult> {

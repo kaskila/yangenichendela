@@ -23,7 +23,7 @@ export default async function AdminBooksList() {
         <h1 className="text-lg font-semibold">Books</h1>
         <Link
           href="/admin/books/new"
-          className="rounded bg-admin-ink px-3 py-2 text-sm font-medium text-admin-surface"
+          className="rounded bg-admin-ink px-3 py-2 text-sm font-medium text-admin-on-dark"
         >
           New book
         </Link>

@@ -72,10 +72,12 @@ export function CoverPanel({
               : "Image uploads are not configured — paste an https image URL."}
           </p>
 
+          {/* text-admin-on-dark! — `!` needed to beat globals.css's unlayered
+              `:where(button){ color: inherit }`. */}
           <button
             type="submit"
             disabled={pending}
-            className="rounded bg-admin-ink px-3 py-2 text-sm font-medium text-admin-surface disabled:opacity-60"
+            className="rounded bg-admin-ink px-3 py-2 text-sm font-medium text-admin-on-dark! disabled:opacity-60"
           >
             {pending ? "Saving…" : coverImageUrl ? "Replace cover" : "Add cover"}
           </button>

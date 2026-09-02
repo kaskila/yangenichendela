@@ -62,11 +62,14 @@ describe("createBook", () => {
   });
 
   it("derives the slug from the title when the field is blank", async () => {
-    const created = await createBook(draft({ slug: "" }));
+    // Title carries the SLUG_PREFIX so the derived slug is still swept by wipe().
+    const created = await createBook(
+      draft({ slug: "", title: `${SLUG_PREFIX}Derived From Title` }),
+    );
     expect(created.ok).toBe(true);
     if (!created.ok) return;
     const book = await getBookForAdmin(created.id);
-    expect(book!.slug).toBe("level-up");
+    expect(book!.slug).toBe(`${SLUG_PREFIX}derived-from-title`);
   });
 
   it("returns slug_taken (not a raw P2002) on a duplicate slug", async () => {
