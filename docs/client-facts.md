@@ -116,12 +116,12 @@ experience is not Lusaka-only. Relevant if we ever claim national reach.
    identity, or sit under his personal brand? Affects the advisory page, the
    nav label and possibly the logo lockup.
 
-6. **Name order.** Three of his own assets disagree. The *Level Up* cover
-   prints **CHENDELA YANGENI**. LinkedIn reads **Yangeni Chendela**. The launch
-   banner logotype reads script **Yangeni** above tracked caps **CHENDELA**.
-   One ordering must be chosen for the site title, nav logotype, OG tags and
-   schema.org markup. Ask him directly — this is the kind of detail that looks
-   careless to people who know him.
+## Name
+
+**Yangeni Chendela** — site title, nav logotype, OG tags, schema.org, and all prose. Confirmed 2026-09-02.
+
+`Book.authorCredit` is separate: it records the credit printed on each cover.
+The Level Up cover prints CHENDELA YANGENI. Do not normalise cover credits to the site name.
 
 ---
 

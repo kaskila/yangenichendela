@@ -1,506 +1,362 @@
 # CLAUDE.md
 
-Project constitution. Read fully before any task. These are not suggestions —
-where this file conflicts with a general best practice, this file wins.
+Project constitution. Read fully before any task. Where this conflicts with a
+general best practice, this wins.
 
-When a requirement is ambiguous, do not invent a business rule. Either raise
-the ambiguity, or make the smallest safe assumption and document it in the
-commit message and in code comments.
+When a requirement is ambiguous, do not invent a business rule. Either raise it,
+or make the smallest safe assumption and document it in the commit message.
+Batch questions — gather them and report together, do not ask serially.
 
-**The smallest-safe-assumption escape hatch does not apply to four areas.**
-For payments, authorization, the registration capacity cap, or any factual
-claim about the client, stop and ask. There is no safe assumption in those
-four; a wrong guess costs money, leaks data, oversells a public event, or
-misrepresents a real person.
+**No safe assumption exists for four things.** Payments, authorization, event
+capacity, or any factual claim about the client — stop and ask. A wrong guess
+there costs money, leaks data, oversells a public event, or misrepresents a real
+person.
 
-Last updated: 2026-09-01
+Reference docs, read when the task touches them:
+`docs/client-facts.md` (every client fact) · `docs/manual-mobile-money-flow.md`
+(payment states, admin screens, fraud cases) · `docs/brand.md` (palette,
+typography, copy style, performance and accessibility detail).
+
+Last updated: 2026-09-02
 
 ---
 
 ## What this is
 
-Author, speaking and advisory platform for **Yangeni Chendela**, a Zambian HR
-practitioner with fifteen years across seven organisations. Currently Human
-Resources Director at Lubona Meat Products Ltd, and Director of his own firm,
-**WANGA HR Consultancy**, since 2014. Author of *Become Unstoppable* and
-*Level Up*.
+Author, speaking and advisory platform for **Yangeni Chendela** — fifteen years
+in HR across seven organisations, currently HR Director at Lubona Meat Products
+and Director of **WANGA HR Consultancy** since 2014. Author of *Become
+Unstoppable* and *Level Up*.
 
-The site does four jobs, in priority order:
+**"Yangeni Chendela" is the confirmed site name** — page titles, nav logotype,
+OG tags, schema.org, all prose. Note `Book.authorCredit` is a separate field
+recording what is printed on each cover; the *Level Up* cover prints CHENDELA
+YANGENI. Do not normalise cover credits to the site name.
 
-1. **Launch registration** — capped-capacity registration and door check-in for
-   the *Level Up* book launch. Date-critical. See "Launch" below.
-2. **Credibility** — convince an HR director or event organiser in under ten
-   seconds that he is worth booking.
-3. **Sell books** — ebook and paperback, paid by Zambian mobile money.
-4. **Grow the list** — newsletter and enquiry capture feeding advisory work.
+Three jobs, in priority order:
 
-Selling books is the visible brief. Advisory leads are where the money is.
-When a design or copy decision trades one against the other, favour credibility.
+1. **Sell books** — ebook and paperback, paid by Zambian mobile money.
+2. **Credibility** — convince an HR director or event organiser in ten seconds.
+3. **Grow the list** — newsletter and enquiry capture feeding advisory work.
 
----
+Books are the visible brief; advisory leads are where the money is. When a
+decision trades one against the other, favour credibility.
 
-## Audience — design decisions follow from this
+**Events are dormant.** The *Level Up* launch has already happened. The
+registration service and its capacity logic are built and tested (see "Events"
+below) but serve nothing. Do not prioritise event work, do not build an event
+page, and do not delete the service — it will be used for the next event.
 
-| Who | Device | Context |
-|---|---|---|
-| Lusaka book buyer | Mid-range Android, expensive data | Arrives from a Facebook link, inside the **Facebook in-app browser** |
-| Diaspora buyer | Better device, card payment | Phase two |
-| HR director / event organiser | Desktop, from LinkedIn | Scanning for credibility, ~8 seconds |
-| Delegate at the launch | Phone, venue wifi (assume bad) | Needs their registration code |
-| **Yangeni (admin)** | **Phone, one-handed** | Confirming payments while reading his SMS inbox |
+## Audience
 
-The last row is the one that gets forgotten. The admin is a mobile tool.
+| Who | Context |
+|---|---|
+| Lusaka book buyer | Mid-range Android, expensive data, **Facebook in-app browser** |
+| HR director / organiser | Desktop from LinkedIn, scanning for ~8 seconds |
+| Diaspora buyer | Card payment, phase two |
+| **Yangeni (admin)** | **Phone, one-handed, while reading his SMS inbox** |
 
-**Consequence:** content must render without JavaScript. No reveal-on-scroll
-gating visible content. If JS fails in the in-app browser, the visitor still
-sees the page.
+The last row gets forgotten. The admin is a mobile tool, not a desktop one.
+
+**Consequence: content must render without JavaScript.** Never gate visible
+content behind scroll-triggered JS. If JS fails in the in-app browser, the page
+must still read, and forms must still submit.
 
 ---
 
 ## Scope
 
-Build what is listed. Do not build what is not, even if it seems obviously
-useful — an unrequested feature is unreviewed code carrying maintenance cost
-into a launch with a fixed date.
+Build what is listed. An unrequested feature is unreviewed code carrying
+maintenance cost.
 
-**Launch (critical path)**
-Public event page · registration with capacity cap · waitlist · confirmation
-email · delegate ticket with code · admin registration list · check-in ·
-CSV export.
+**Admin** — auth ✅ · books CRUD · payment queue · claim review · unmatched
+payments · fulfilment queue · order timeline · flags.
 
-**Public**
-Home · about · books · book detail · speaking · advisory · contact ·
-newsletter capture.
+**Commerce** — catalogue · book detail · cart · checkout · payment instructions
+· claim submission · order status · ebook delivery · print fulfilment.
 
-**Commerce**
-Catalogue · cart · checkout · order creation · payment instructions ·
-payment claim submission · order status page · ebook delivery · print
-fulfilment tracking.
+**Public** — home · about · books · speaking · advisory · contact · newsletter.
 
-**Admin**
-Auth · payment queue · claim review · unmatched payments · fulfilment queue ·
-order timeline · registration management · operational flags.
+**Out of scope for v1** — card gateway integration (interface exists, adapter
+comes after KYC) · international shipping · courier APIs · stock sync · returns
+· QR check-in · multi-currency · blog CMS · customer accounts beyond magic-link
+order access · discount codes · analytics dashboards · rich text editing ·
+image cropping · drag-and-drop reordering · bulk actions.
 
-**Explicitly out of scope for v1**
-Card payments and gateway integration (the interface exists; the adapter comes
-after KYC clears) · international shipping · courier API integration ·
-real-time stock sync · returns handling · QR check-in · multi-currency
-display · blog CMS · customer accounts beyond magic-link order access ·
-discount codes · analytics dashboards beyond the queue counts.
-
-If something in the out-of-scope list appears necessary, raise it rather than
-building it.
-
----
-
-## Stack
-
-- Next.js (App Router) + TypeScript, strict
-- Tailwind CSS v4
-- Prisma 7 with `prisma.config.ts` (not the old `generator` block conventions)
-- PostgreSQL on Neon
-- Better Auth
-- Cloudinary — images and private receipt uploads
-- Resend or Brevo for transactional email (**decision pending** — Brevo if the
-  newsletter consolidates there)
-- Vercel
-
-Use the versions actually installed. Do not upgrade a major dependency without
-approval.
-
-### Before adding any dependency
-
-Answer all five in the commit message or the PR description. If any answer is
-weak, do not add it.
-
-1. Is the functionality actually required by the current task?
-2. Can it be done with what is already installed, in a comparable amount of code?
-3. Is the package maintained, and what is its transitive dependency weight?
-4. Does it work with the installed Next.js and React versions?
-5. What does it cost the performance budget? Check the shipped bundle size,
-   not the npm listing.
-
-Popularity is not a reason. Familiarity is not a reason.
-
-**Already ruled out, do not reopen without asking:** a state management
-library, React Query or SWR, an animation library, a component kit, an ORM
-wrapper on top of Prisma.
+If something out of scope seems necessary, raise it rather than building it.
 
 ---
 
 ## Repository status
 
-**This is a greenfield create-next-app scaffold.** Nothing in the Architecture,
-Launch, Admin or Absolute Rules sections is implemented yet. Those sections are
-**specifications to build against**, not descriptions of existing code. If this
-file describes a file or function, check whether it exists before relying on it.
+**Built and committed:** Next.js 16.3.4 · React 19.2.8 · TS 5.9 strict ·
+Tailwind v4 · ESLint 9 · Prisma 7.10, full schema migrated · Better Auth 1.7
+with `requireAdmin`/`requireStaff`, `/admin/login`, sign-out · zod 4.5.4 ·
+Vitest with a real test database · `src/lib/services/registration.ts` and its
+15 integration tests.
 
-Installed and working: Next.js 16.3.4, React 19.2.8, TypeScript 5.9 strict,
-Tailwind v4 (CSS-first, default theme), ESLint 9 flat config.
+**Not built:** books CRUD, all public pages, `transitionPayment()`, all payment
+work, email, Cloudinary, Playwright.
 
-Not yet installed: Prisma, Better Auth, Cloudinary, email provider, Vitest,
-Playwright.
+**Do not touch** `src/app/page.tsx` and `layout.tsx` — still create-next-app
+defaults awaiting brand assets.
 
-**Next.js 16 post-dates the training data of any model working on this repo.**
-`node_modules/next/dist/docs/` is the source of truth for App Router APIs, not
-recall. Check it before using a Next-specific API. Note `next lint` was removed
-in this major.
+### Versions post-date model training data — read node_modules, do not recall
+
+- **Prisma 7.10 removed connection URLs from `schema.prisma`.** Datasource is
+  `provider` only. A driver adapter is mandatory: `src/lib/db.ts` builds
+  `PrismaPg` from `DATABASE_URL`; `prisma.config.ts` holds the migration URL and
+  calls `process.loadEnvFile()`.
+- **Import from `@/generated/prisma/client`.** Never `@prisma/client`, and there
+  is no bare `@/generated/prisma` index.
+- **Better Auth 1.7 scopes account identity by `issuer`.** For credentials the
+  value is `"local:credential"` (from `createLocalAccountIssuer`), not
+  `"credential"`. `role` reaches the session only because it is declared in
+  `user.additionalFields` — remove that and every guard 403s everyone.
+- **`forbidden()` requires `experimental.authInterrupts: true`** in
+  `next.config.ts`. It is experimental: if a Next update changes it, the
+  authorization *denial* path breaks. Check it after any Next upgrade.
+- `next lint` is removed. Bare `tsc` fails on a clean tree — Next 16 generates
+  `LayoutProps`/`PageProps` into `.next/types`, hence `next typegen && tsc`.
+
+**Accepted, do not "fix":** `npm audit` reports 4 highs inside Prisma's own
+subtree (`deepmerge-ts`; `mysql2`, unreachable here). `audit fix --force`
+downgrades to Prisma 6. Prisma 8 is an rc — do not upgrade.
 
 ---
 
 ## Commands
 
 ```
-npm run dev          # local dev (Turbopack is the Next 16 default)
-npm run build        # production build — must pass before any commit to main
-npm run lint         # eslint --max-warnings 0
-npm run typecheck    # tsc --noEmit, zero errors
-npm test             # vitest run
-npm run db:migrate   # prisma migrate dev
-npm run db:studio    # prisma studio
+npm run dev · build · lint (eslint --max-warnings 0) · typecheck · test
+npm run db:migrate · db:studio · db:migrate:test
+npm run db:seed:admin -- <email> <password> <name> <ADMIN|STAFF>
 ```
 
-**npm, not pnpm.** The repo has `package-lock.json` and no `packageManager`
-field. Do not migrate lockfiles mid-project.
+`postinstall` runs `prisma generate`. **npm, not pnpm** — do not migrate
+lockfiles.
 
-Scripts marked above that do not yet exist must be added as part of foundation
-work.
+**Definition of done:** typecheck, lint and test pass; the feature works end to
+end in a browser; it is committed. Not before all four.
 
-**Definition of done for a slice:** typecheck, lint and test pass; the feature
-works end to end in a browser; it is committed. Not before all four.
+**Every schema change goes through a migration file** — never a direct `psql`
+`ALTER`. Direct edits are invisible to version control and to production.
 
 ## Testing
 
-Vitest for services and transitions. Playwright for the registration and
-checkout flows only — do not add end-to-end coverage elsewhere.
+Vitest for services. Playwright for checkout only, when it exists. Tests hit a
+**real** test database — a mocked Prisma client lets a read-then-write
+implementation pass, which is the one thing they exist to catch. A vitest
+`globalSetup` runs `prisma migrate deploy` against `.env.test`;
+`fileParallelism` is false because there is one database.
 
-Three tests matter more than the rest of the suite combined:
+The tests that matter more than the rest combined:
 
 1. Every payment state transition, including illegal ones that must throw.
-2. A concurrency test firing 250 simultaneous registrations at a 200-seat
-   event, asserting exactly 200 confirmed and 50 waitlisted.
-3. Duplicate transaction ID rejection, and double-confirmation of a claim.
+2. Duplicate transaction ID rejection, and double-confirmation of a claim.
+3. Money conversion edge cases — see Rule 2.
+4. (Built) 250 concurrent registrations against a 200-seat event.
 
 ## Environment
 
 ```
-DATABASE_URL  DIRECT_URL
-BETTER_AUTH_SECRET  BETTER_AUTH_URL  NEXT_PUBLIC_APP_URL
-CLOUDINARY_CLOUD_NAME  CLOUDINARY_API_KEY  CLOUDINARY_API_SECRET
-RESEND_API_KEY (or BREVO_API_KEY)  EMAIL_FROM
+DATABASE_URL  DIRECT_URL  BETTER_AUTH_SECRET  BETTER_AUTH_URL
+NEXT_PUBLIC_APP_URL  CLOUDINARY_*  RESEND_API_KEY|BREVO_API_KEY  EMAIL_FROM
 ```
 
-Keep `.env.example` in sync with every variable the code reads. Never commit
-`.env`.
+Keep `.env.example` in sync. Never commit `.env`.
 
----
+**`BETTER_AUTH_SECRET` must be set in production.** Without it Better Auth falls
+back to a hardcoded default and every session token is forgeable. The build only
+warns.
 
-## Brand
-
-Owned by the client, taken from the *Level Up* cover and launch material. Do
-not invent alternatives.
-
-- **Deep forest green** — primary ground
-- **Bright lemon-gold** — accent, display type, primary actions
-- Cream and white for text on green
-- Heavy, tight-set sans for display; a script for a single accent phrase only;
-  tracked caps for category and author lines
-- Script logotype "Yangeni" with tracked caps "CHENDELA" beneath
-- Circular photo crops with a gold ring
-
-Provisional tokens — **eyedrop from the source files and replace before
-launch**, these are read off a JPEG:
-
-```css
---green-deep: #0E3520;   /* ground */
---green-mid:  #164A2E;   /* raised surfaces, hover */
---gold:       #F2CB1D;   /* ON GREEN AND LARGE DISPLAY ONLY */
---gold-text:  #7A6209;   /* darkened — required for gold text on light */
---cream:      #F4F1E8;
-```
-
-**Gold fails AA on white at roughly 1.5:1.** This is measured, not predicted.
-Gold is a background and large-display colour on green. Any gold-coloured text
-on a light surface must use `--gold-text`. Do not nudge the bright gold and
-hope; it is not close.
-
-### Tone
-
-The *Level Up* cover reads "Inspiration & Leadership" over warm, stylish
-photography — cream suit, straw hat, sunlit garden. The site should carry that
-warmth. Do not design austere or corporate-severe; that underserves the reader
-who actually buys the book, and the cover is the client's own statement of
-tone.
-
-The admin does **not** use brand colours. See "Admin" below.
+**Databases:** local PostgreSQL 17.5 (`yangeni`, `yangeni_test`) in dev; Neon in
+production. Locally `DATABASE_URL` and `DIRECT_URL` are identical direct
+connections; on Neon they differ (pooled vs direct). Interactive transactions
+behave differently through a pooler — run the concurrency test against a Neon
+branch before going live.
 
 ---
 
 ## Absolute rules
 
-These cause real damage if broken. Do not work around them.
+**1. Never invent facts about the client.** Every factual claim must come from
+`docs/client-facts.md`. If it is not there, stop and ask. No fabricated
+statistics, testimonials, review counts, subscriber numbers, press logos or
+endorsements — he is a real, identifiable professional in a small market.
+Missing content means omitting the section or using a **visibly** fake
+placeholder, never plausible fiction.
 
-### 1. Never invent facts about the client
+**2. Money is integer minor units.** `priceMinor: Int`, ngwee not kwacha. Never
+float, Decimal or string. Currency always an explicit adjacent field.
 
-**Every factual claim about Yangeni must come from `docs/client-facts.md`.
-If a fact is not in that file, stop and ask.** Do not infer, round up, or fill
-a gap with something plausible.
+Conversion lives in `src/lib/money.ts` with tests, and nowhere else. Parse as a
+**string** — split on the decimal point, validate the fraction to 2 digits,
+combine as an integer. **Never `parseFloat(x) * 100`**: in IEEE 754,
+`250.10 * 100` is `25009.999999999996`, which truncates to a price one ngwee
+short, silently. Format back to "K250.50" only at render.
 
-No fabricated statistics, testimonials, review counts, subscriber numbers,
-press logos, or named endorsements. He is a real, identifiable professional in
-a small market. A made-up "150 keynotes" or a fake Harvard Business Review logo
-is a reputational liability for him and for us.
-
-If real content is missing, either omit the section or use a placeholder that
-is **visibly** a placeholder. Never plausible-looking fiction.
-
-### 2. Money is integer minor units
-
-`totalMinor: Int`. Ngwee, not kwacha. Never a float, never a Decimal, never a
-string. Currency is always an explicit adjacent field. Format only at the
-render boundary.
-
-### 3. Payment state changes go through `transitionPayment()`
-
-No route handler, server action, script or seed writes `paymentState`
-directly. That function owns the legal-transition table and throws on anything
-illegal.
+**3. Payment state changes go through `transitionPayment()`.** No route, action,
+script or seed writes `paymentState` directly.
 
 ```
-PENDING     → SUBMITTED | EXPIRED | CANCELLED
-SUBMITTED   → CONFIRMED | REJECTED | UNDERPAID | EXPIRED
-REJECTED    → SUBMITTED
-UNDERPAID   → CONFIRMED | REFUNDED
-CONFIRMED   → REFUNDED
-EXPIRED     → SUBMITTED
+PENDING   → SUBMITTED | EXPIRED | CANCELLED
+SUBMITTED → CONFIRMED | REJECTED | UNDERPAID | EXPIRED
+REJECTED  → SUBMITTED        UNDERPAID → CONFIRMED | REFUNDED
+CONFIRMED → REFUNDED         EXPIRED   → SUBMITTED
 ```
 
-### 4. Side effects come after the guarded state change
+**4. Side effects come after the guarded state change.** Conditional
+`updateMany` with the expected current state in the `where`; if `count === 0`,
+throw — someone else got there first. Only then issue tokens, send email, write
+events. Sends carry an idempotency key of `${orderId}:${eventType}` on
+`Notification`.
 
-Confirm with a conditional `updateMany` that includes the expected current
-state in its `where`. If `count === 0`, throw — someone else got there first.
-Only then issue tokens, send email, write events. Every send carries an
-idempotency key of `${orderId}:${eventType}`.
+**5. Every server action starts with `requireAdmin()` or `requireStaff()`.**
+Middleware is not a substitute. An unprotected server action is a public
+endpoint regardless of what the UI shows. Public actions (e.g. checkout) are
+deliberate — mark them with a comment so nobody "fixes" them.
 
-### 5. Every server action starts with authorization
+**6. Every order mutation writes an `OrderEvent`.** Append-only, never updated
+or deleted. It is the only defence in a flow where confirmation is human
+judgement.
 
-```ts
-const admin = await requireAdmin();   // or requireStaff()
-```
+**7. `OrderItem` snapshots `unitPriceMinor` and `titleSnapshot`** at purchase
+time. Raising prices must not change historical orders.
 
-Middleware alone is not protection. An unprotected server action is a public
-endpoint regardless of what the UI shows.
+**8. No hard deletes on anything sold.** `OrderItem → BookFormat` is
+`onDelete: Restrict` so a sold format cannot vanish from order history. Use
+`Book.published` and `BookFormat.isAvailable` as soft toggles. A delete button
+works fine in testing and throws a foreign key error the first time it matters.
 
-### 6. Every mutation writes an `OrderEvent`
-
-Append-only. Never updated, never deleted. This is the only defence in a flow
-where payment confirmation is a human judgement.
-
-### 7. Prices and titles are snapshotted onto `OrderItem`
-
-`unitPriceMinor` and `titleSnapshot` are copied at purchase time. When he
-raises prices, historical orders must not change value.
-
-### 8. No secrets in the repo
-
-Env vars only. No API keys, no merchant numbers, no seed passwords in
-committed files.
+**9. No secrets in the repo.** No API keys, no merchant numbers, no seed
+passwords in committed files.
 
 ---
 
 ## Architecture
 
-Three layers. Do not add a fourth.
-
 ```
-server action    →  auth, Zod validation, response shaping
-  service        →  business rules, state transitions, side effects
-    prisma       →  data access
+server action  →  auth, Zod validation, response shaping
+  service      →  business rules, state transitions, side effects
+    prisma     →  data access
 ```
 
-- Server Components by default. `"use client"` only for browser APIs,
-  interactive state, event handlers or client hooks.
-- **Never convert a whole page to a Client Component because one small part of
-  it is interactive. Extract that part into its own leaf component and mark
-  only that.** A `"use client"` at the top of a page pulls the entire subtree
-  into the bundle, which is how the 200KB budget gets blown without anyone
-  noticing.
-- Mutations are server actions with Zod schemas. No API routes for internal
-  work; API routes only for webhooks and file downloads.
-- `revalidatePath` after writes. No client-side refetching.
-- Route groups: `(marketing)` public, `(shop)` checkout and orders,
-  `(admin)` protected.
+Three layers, no fourth.
 
-### Payment providers
+- Server Components by default. **Never mark a whole page `"use client"`
+  because one part is interactive — extract that part into a leaf.** A
+  `"use client"` at page level pulls the entire subtree into the bundle.
+- Forms use `<form action={serverAction}>` so they submit without JavaScript.
+  `useActionState` returns errors without losing what the user typed.
+- Mutations are server actions with Zod schemas. API routes only for webhooks
+  and downloads. `revalidatePath` after writes, no client-side refetching.
+- Route groups: `(marketing)` · `(shop)` · `(admin)` · `(auth)`. Route groups
+  do not affect the URL.
+- **Dependencies:** justify need, whether existing tools suffice, maintenance,
+  version compatibility, and shipped bundle cost — before adding. Popularity is
+  not a reason. Already ruled out: state management, React Query/SWR, animation
+  libraries, component kits, ORM wrappers.
 
-All payment work goes through the `PaymentProvider` interface. The manual
-mobile money provider is the launch implementation and stays permanently as a
-fallback. When ZynlePay or Pesapal onboarding clears, it becomes a second
-implementation — **no fulfilment logic changes**.
-
-Fulfilment logic must never live in an admin controller. The admin confirm
-action emits the same internal `PaymentEvent` a gateway webhook would, into the
-same handler.
-
----
-
-## Launch (`LaunchEvent` / `Registration`)
-
-Capacity is capped (first 200 delegates). **Count-then-insert oversells.** Use
-a conditional decrement inside a transaction:
-
-```ts
-const claimed = await tx.launchEvent.updateMany({
-  where: { id, seatsRemaining: { gt: 0 } },
-  data:  { seatsRemaining: { decrement: 1 } },
-});
-if (claimed.count === 0) → waitlist instead of confirm
-```
-
-**This service does not exist yet — it is specified, not built.** When writing
-`lib/services/registration.ts`, three behaviours below are deliberate and must
-survive any later refactor:
-
-- Cancellation **either** promotes the waitlist head **or** increments
-  `seatsRemaining` — never both, or the same seat is issued twice.
-- A repeat submission returns the existing registration rather than throwing,
-  because people double-tap on bad connections.
-- A previously `CANCELLED` row is revived on re-registration, because
-  `@@unique([eventId, email])` would otherwise lock that email out forever.
-
-Check-in is a **searchable list with a big button per row**. No QR scanning at
-launch: it needs camera permission, decent light and a live connection, and if
-any of those fail at the door there is a queue of people and no fallback.
-
-A second check-in scan returns `ALREADY_CHECKED_IN` as a neutral state, not an
-error. Nobody on a door with a queue behind them should be reading a red banner.
-
-Assume venue wifi is bad. Provide a delegate CSV export he can print the
-morning of. Check-in must degrade to paper.
+**Payment providers.** All payment work goes through the `PaymentProvider`
+interface. Manual mobile money is the launch implementation and stays as a
+permanent fallback; a gateway becomes a second implementation with **no
+fulfilment logic changes**. Fulfilment logic never lives in an admin
+controller — the admin confirm action emits the same internal `PaymentEvent` a
+webhook would, into the same handler.
 
 ---
 
 ## Admin
 
-The admin is a **tool, not a brochure**. It does not use the brand palette.
+A **tool, not a brochure**. Neutral greys, high contrast, dense spacing, no
+decorative type, a thin green header bar as the only brand tie-in. Under 50KB
+JS per page.
 
-- Neutral greys, high contrast, dense spacing, no decorative type
-- Thin green header bar is the only brand tie-in
-- **Mobile-first for real.** Claim review fits one phone viewport with no scroll
-- Amount input: `inputmode="numeric"`, numeric keypad
-- Primary action sits in a bottom bar within thumb reach, not at the top of a form
-- Under 50KB of JS per admin page
-- Component inventory is small: queue list, review panel, status badge, bottom
-  action bar, empty state, confirm dialog. Build once, reuse.
+**Mobile-first for real.** Test at 380px. Claim review fits one phone viewport
+with no scroll. Amount input uses `inputmode="numeric"`. The primary action sits
+in a bottom bar within thumb reach, not at the top of a form.
 
-**The Confirm button on a payment claim is disabled until the admin types the
+**The Confirm button on a payment claim stays disabled until the admin types the
 amount they can see in the mobile money account.** This is the only working
 control against fabricated transaction references. Do not add a one-click
 confirm. Do not "improve" this.
 
----
+Guards redirect to `/admin/login` when not signed in; signed-in-but-wrong-role
+gets a **403**, not a redirect, or a STAFF user loops.
 
-## Copy
-
-- Sentence case. Active voice. Plain verbs.
-- Buttons say what happens: "Confirm payment", not "Submit".
-- An action keeps its name through the whole flow — "Confirm payment" produces
-  "Payment confirmed".
-- Errors state what went wrong and what to do. They do not apologise and are
-  never vague.
-- Rejection reasons are shown verbatim to the buyer, so the wording in the
-  fixed reason list must be customer-safe.
-
-Avoid, as house style: all-caps eyebrow labels above sections; italicising one
-word in a headline for emphasis; numbered markers on content that is not a
-sequence; arrows appended to button text.
+**Copy:** sentence case, active voice, plain verbs. Buttons say what happens
+("Confirm payment", not "Submit") and keep the same name through the flow.
+Errors state what went wrong and what to do. Rejection reasons are shown
+verbatim to buyers, so the fixed list must be customer-safe.
 
 ---
 
-## Performance budget
+## Events (dormant — built, not scheduled)
 
-Primary audience is on expensive mobile data in the Facebook in-app browser.
+`src/lib/services/registration.ts` is complete and tested. Read it before
+touching anything event-related; do not reimplement.
 
-- Under 200KB above the fold on the homepage
-- One variable font file per family, self-hosted and subsetted. **Never**
-  `fonts.googleapis.com` in production
-- Images: explicit dimensions, modern formats, sized to actual display size
-- No hero video, no animation library
-- Lighthouse 90+ on all four axes
-- LCP under 2.5s on simulated 3G
+The seat claim is a guarded conditional decrement — **never** read
+`seatsRemaining` and then decide, and never count `Registration` rows. A
+database `CHECK ("seatsRemaining" >= 0)` is the backstop.
 
----
+`RegistrationStatus` is `CONFIRMED | WAITLIST | CANCELLED` — **`WAITLIST`, not
+`WAITLISTED`**. Open/close is the boolean `LaunchEvent.registrationOpen`.
 
-## Accessibility
-
-WCAG 2.1 AA, non-negotiable.
-
-- Bright gold on white fails at ~1.5:1. Use `--gold-text` for gold-coloured
-  text on light surfaces. Re-verify all pairings once real hexes are eyedropped.
-- Visible keyboard focus on everything interactive
-- `prefers-reduced-motion` respected
-- Real labels on every input; placeholder is never the label
+Deliberate behaviours that must survive any refactor: cancellation **either**
+promotes the waitlist head **or** increments `seatsRemaining`, never both; a
+repeat submission returns the existing row rather than throwing; a `CANCELLED`
+row is revived on re-registration. When check-in is eventually built it is a
+searchable list with a big button per row — no QR — and a second check-in is a
+**neutral** already-checked-in state, not an error.
 
 ---
 
 ## Working method
 
-- **Vertical slices, not layers.** "Register for the launch, end to end" beats
-  "build all the models."
-- Commit at every green state.
-- Plan mode for anything touching payments, auth, or capacity.
-- Schema changes are a conversation, not a unilateral edit.
-- Do not refactor code you were not asked to touch.
-- If a requirement is ambiguous, ask. Do not guess and build.
+Vertical slices, not layers. Commit at every green state. Plan mode for
+payments, auth, or money conversion. Schema changes are a conversation, not a
+unilateral edit. Do not refactor code you were not asked to touch.
 
 ## Build order
 
-1. Auth + `requireAdmin` / `requireStaff` seam
-2. Launch registration + capacity logic + waitlist
-3. Check-in screen + CSV export
-4. `transitionPayment()` + tests
-5. Books, orders, checkout, payment instructions page
-6. Claim submission + normalisation + rate limits
-7. Admin payment queue + claim review
-8. Download tokens + watermarking + order status page
-9. Transactional email
-10. Print fulfilment queue
-11. Unmatched payments, flags, content management
+1. Auth seam ✅
+2. Registration service ✅ (dormant)
+3. Admin shell + books CRUD ← **current**
+4. Public book catalogue and detail pages
+5. `transitionPayment()` + tests
+6. Cart, checkout, order creation, payment instructions
+7. Claim submission + normalisation + rate limits
+8. Admin payment queue + claim review
+9. Download tokens + watermarking + order status page
+10. Transactional email
+11. Marketing pages — home, about, speaking, advisory
+12. Print fulfilment queue, unmatched payments, flags
 
-Items 1–3 are launch-critical. This ordering assumes the launch date is close;
-confirm before deviating.
+Marketing pages sit late because they are the most blocked on client assets,
+not because they matter least.
 
 ---
 
 ## Open items — do not invent answers
 
-**Blocking the build order:**
+**Blocking commerce (items 6–8):** book prices per format in kwacha · merchant
+mobile money numbers per network, and whether those lines are personal or
+registered to a business · delivery flat rates (Lusaka / rest of Zambia) ·
+**real transaction ID formats from actual Airtel, MTN and Zamtel receipts —
+write no validation regex until confirmed** · refund policy for digital goods ·
+Resend vs Brevo.
 
-- Launch date and venue
-- **Name order.** The cover reads "CHENDELA YANGENI", LinkedIn reads "Yangeni
-  Chendela", the launch logotype reads "Yangeni / CHENDELA". Pick one for the
-  site title, nav logotype, OG tags and schema.org markup.
-- **Is WANGA HR Consultancy actively trading?** His About text states an
-  objective of *becoming* a consultant, but he has been its Director since
-  2014. This determines whether the advisory page is an established firm with
-  its own identity or a new offering under his personal brand.
+**Blocking design (item 11):** brand hex values and logo SVG · flat cover
+artwork for both books (the 3D mockup is hero material only) · the rest of the
+*Level Up* photo shoot · whether the board-chair-then-HR-Director sequence at
+Lubona is a story he wants told.
 
-**Blocking commerce:**
+**Blocking the advisory page:** is WANGA HR Consultancy actively trading? His
+About text says he wants to *become* a consultant; he has been its Director
+since 2014. Decides whether advisory is an established firm with its own
+identity or a new offering under his personal brand.
 
-- Book prices per format, in kwacha
-- Merchant mobile money numbers per network
-- Delivery flat rates: Lusaka / rest of Zambia
-- Real transaction ID formats from actual Airtel, MTN and Zamtel receipts —
-  **write no validation regex until these are confirmed**
-- Refund policy for digital goods
-- Resend vs Brevo
-
-**Blocking design:**
-
-- Exact brand hex values and the logo as SVG
-- Flat cover artwork (PNG or PDF) for both books — the 3D mockup is hero
-  material only
-- The rest of the *Level Up* photo shoot. Same suit, same location; a
-  consistent set is worth more than any design decision available to us
-- Whether the board-chair-then-HR-Director sequence at Lubona is a story he
-  wants told
+**Open, non-blocking:** should delegate/customer organisation be captured? It
+would need a schema column. Worth asking — a room of HR managers is a lead list.
