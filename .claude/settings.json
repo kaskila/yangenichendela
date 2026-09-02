@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"TYPECHECK_EXIT:$?\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(node -e \"const s=require\\('./package.json'\\).scripts; console.log\\(JSON.stringify\\(s,null,2\\)\\)\")",
+      "Bash(echo \"exit=$? \\(1 = NOT ignored\\)\")",
+      "Bash(node -e \"console.log\\('tsx', require\\('./node_modules/tsx/package.json'\\).version\\)\")",
+      "Bash(node -e \"const p=require\\('./node_modules/better-auth/package.json'\\); console.log\\(JSON.stringify\\(p.exports['./db'],null,1\\)\\)\")",
+      "Bash(node -e \"try{require.resolve\\('@better-auth/core/db'\\);console.log\\('yes @better-auth/core/db'\\)}catch\\(e\\){console.log\\('no',e.message\\)}\")",
+      "Bash(node -e \"const p=require\\('./node_modules/better-auth/package.json'\\); console.log\\(!!p.exports['./api']\\)\")",
+      "Bash(echo \"LINT EXIT $?\")",
+      "Bash(npx tsx *)"
+    ]
+  }
+}

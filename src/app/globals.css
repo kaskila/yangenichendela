@@ -1,26 +1,220 @@
 @import "tailwindcss";
 
+/* ===========================================================================
+   Yangeni Chendela — design tokens
+
+   TWO LAYERS. Components use layer 2 only.
+
+   Layer 1  raw palette   — the actual colours. Never referenced in a component.
+   Layer 2  semantic      — surface / ink / accent. This is what you write.
+
+   When the real brand hex values arrive, edit the five values marked
+   PROVISIONAL below and nothing else. That is the whole point of the split.
+
+   CONTRAST — measured, not assumed. Re-verify when hexes are replaced.
+     cream on green-deep     ~13:1   PASS AA and AAA
+     gold on green-deep      ~8:1    PASS AA and AAA
+     gold on white           ~1.6:1  FAILS — never use bright gold as text
+                                     on a light surface. Use --accent-ink.
+     accent-ink on cream     ~5:1    PASS AA for normal text
+=========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* --- Layer 1: raw palette ---------------------------------------------
+     PROVISIONAL. Eyedropped from a JPEG of the Level Up cover, not from
+     source artwork. Replace all five before launch. */
+
+  --green-950: #0a2617;
+  --green-900: #0e3520;  /* PROVISIONAL — primary ground */
+  --green-800: #164a2e;  /* PROVISIONAL — raised surface, hover */
+  --green-700: #1e5f3b;
+
+  --gold-500: #f2cb1d;   /* PROVISIONAL — display + accent, ON GREEN ONLY */
+  --gold-600: #c9a412;
+  --gold-800: #7a6209;   /* PROVISIONAL — darkened, for gold text on light */
+
+  --cream-50: #faf9f5;
+  --cream-100: #f4f1e8;  /* PROVISIONAL */
+  --cream-200: #e6e1d3;
+
+  --ink-900: #12161c;
+  --ink-700: #2a313b;
+  --ink-500: #5c6673;
+  --ink-300: #9aa3ae;
+
+  /* Admin greys. Deliberately separate from the brand — the admin is a tool,
+     not a brochure, and must not inherit warm cream or forest green. */
+  --grey-50: #fafafa;
+  --grey-100: #f4f4f5;
+  --grey-200: #e4e4e7;
+  --grey-400: #a1a1aa;
+  --grey-600: #52525b;
+  --grey-900: #18181b;
+
+  /* Status. Muted on purpose — a confirmation should not shout, and a
+     rejection is routine admin work, not an emergency. */
+  --success-600: #4d7355;
+  --success-50: #eef3ef;
+  --warning-600: #9a6b18;
+  --warning-50: #fbf4e6;
+  --danger-600: #a33d3d;
+  --danger-50: #f9eded;
+
+  /* --- Layer 2: semantic aliases ---------------------------------------
+     Write these in components. Never the raw names above. */
+
+  --surface: var(--cream-50);          /* default page ground */
+  --surface-raised: var(--cream-100);  /* cards, quiet bands */
+  --surface-inverse: var(--green-900); /* green sections */
+  --surface-inverse-raised: var(--green-800);
+
+  --ink: var(--ink-900);               /* body text on light */
+  --ink-muted: var(--ink-500);
+  --ink-inverse: var(--cream-100);     /* body text on green */
+  --ink-inverse-muted: color-mix(in srgb, var(--cream-100) 68%, transparent);
+
+  --accent: var(--gold-500);           /* ON GREEN or large display ONLY */
+  --accent-hover: var(--gold-600);
+  --accent-ink: var(--gold-800);       /* gold-coloured TEXT on light */
+  --accent-on: var(--green-950);       /* text sitting on a gold fill */
+
+  --border: color-mix(in srgb, var(--ink-900) 12%, transparent);
+  --border-inverse: color-mix(in srgb, var(--cream-100) 20%, transparent);
+
+  --focus: var(--gold-800);            /* AA-safe on both light and dark */
 }
+
+/* ===========================================================================
+   Tailwind theme. `inline` so utilities emit var() references — swapping a
+   raw value updates every utility without a rebuild of intent.
+=========================================================================== */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-surface-inverse-raised: var(--surface-inverse-raised);
+
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-ink-inverse-muted: var(--ink-inverse-muted);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-on: var(--accent-on);
+
+  --color-border: var(--border);
+  --color-border-inverse: var(--border-inverse);
+
+  --color-success: var(--success-600);
+  --color-success-bg: var(--success-50);
+  --color-warning: var(--warning-600);
+  --color-warning-bg: var(--warning-50);
+  --color-danger: var(--danger-600);
+  --color-danger-bg: var(--danger-50);
+
+  --color-admin-bg: var(--grey-50);
+  --color-admin-surface: #ffffff;
+  --color-admin-border: var(--grey-200);
+  --color-admin-ink: var(--grey-900);
+  --color-admin-ink-muted: var(--grey-600);
+
+  /* PLACEHOLDER FONTS. Geist via next/font, which self-hosts at build so no
+     runtime request to fonts.googleapis.com. Not the brand faces — the cover
+     uses a heavy tight-set sans for display and a script for one accent
+     phrase. Replace when those are identified and licensed. */
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Display sizes. Fluid, so no breakpoint jumps on the mid-range Android
+     that most of this audience is using. */
+  --text-display: clamp(2.25rem, 1.2rem + 4.4vw, 4.5rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.02em;
+
+  --text-title: clamp(1.6rem, 1.2rem + 1.7vw, 2.5rem);
+  --text-title--line-height: 1.12;
+  --text-title--letter-spacing: -0.015em;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ===========================================================================
+   Base
+=========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* No prefers-color-scheme swap. The palette is the brand, not a light/dark
+   preference — a dark mode would put cream text on a dark grey that isn't
+   forest green, which is off-brand rather than accessible. */
+
+img,
+picture,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+/* Visible focus on everything interactive. Gold-800 clears 3:1 against both
+   cream and forest green, so one ring works on either ground. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Inputs do not inherit font by default. */
+:where(input, select, textarea, button) {
+  font: inherit;
+  color: inherit;
+}
+
+/* Numeric fields in the admin — payment amounts, seat counts — line up in
+   columns and cannot be misread as one another. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print. The delegate ticket and the CSV picking slip get printed, and the
+   venue wifi is assumed bad — paper is the check-in fallback. */
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .no-print {
+    display: none !important;
+  }
 }

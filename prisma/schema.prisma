@@ -1,0 +1,616 @@
+// ---------------------------------------------------------------------------
+// Prisma 7. Connection URLs are NOT in this file any more — the app passes a
+// driver adapter (@prisma/adapter-pg) to PrismaClient at runtime (see
+// src/lib/db.ts), and migrations read their URL from prisma.config.ts.
+//   DATABASE_URL = Neon pooled connection (app)
+//   DIRECT_URL   = Neon direct connection (migrations)
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ===========================================================================
+// AUTH  (Better Auth 1.7 — email + password only, no social, no public signup)
+//   Field set matches `getAuthTables()` from the installed better-auth
+//   (@better-auth/core/db). Admin/staff rows are seeded by hand. `role` is our
+//   own additional field — declared in src/lib/auth/index.ts so it rides on
+//   the session user.
+//   Note: better-auth 1.7 scopes account identity by `issuer`
+//   (@@unique([issuer, accountId])), replacing the old providerId+accountId key.
+// ===========================================================================
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  /// Our field. Gate for requireAdmin() / requireStaff(); defaults to STAFF.
+  role          UserRole @default(STAFF)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+
+  // App relations — staff actions we attribute to a real user.
+  checkedInRegistrations Registration[]     @relation("RegistrationCheckedInBy")
+  reviewedClaims         PaymentClaim[]     @relation("ClaimReviewedBy")
+  recordedUnmatched      UnmatchedPayment[] @relation("UnmatchedRecordedBy")
+  resolvedFlags          Flag[]             @relation("FlagResolvedBy")
+  handledEnquiries       Enquiry[]          @relation("EnquiryHandledBy")
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  /// Identity provider issuer. "credential" for email + password.
+  issuer                String
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  /// Password hash for the credential (email + password) provider.
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([issuer, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ===========================================================================
+// BOOKS  (two books, each in two independently priced + stocked formats)
+// ===========================================================================
+
+enum BookFormatType {
+  PRINT
+  EBOOK
+}
+
+model Book {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  title        String
+  /// e.g. "and unlock your Fate"
+  subtitle     String?
+  /// Cover category line, e.g. "Inspiration & Leadership".
+  categoryLine String?
+  /// Author credit exactly as printed on THIS book's cover; differs per book.
+  authorCredit String
+  description  String
+  /// Cloudinary URL for the flat cover artwork.
+  coverImageUrl String?
+  published    Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  formats BookFormat[]
+
+  @@index([published, sortOrder])
+}
+
+model BookFormat {
+  id          String         @id @default(cuid())
+  bookId      String
+  book        Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  type        BookFormatType
+  /// Integer minor units (ngwee). Never a float or decimal.
+  priceMinor  Int
+  currency    String         @default("ZMW")
+  /// Soft availability toggle. Never hard-delete a format that has been sold.
+  isAvailable Boolean        @default(true)
+  /// PRINT only: units in hand. NULL for EBOOK (unlimited).
+  stockOnHand Int?
+  /// EBOOK only: private storage key / URL for the master PDF.
+  ebookAssetUrl String?
+  /// PRINT only, reserved for a future courier weight calculation.
+  weightGrams Int?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  orderItems OrderItem[]
+
+  @@unique([bookId, type])
+}
+
+// ===========================================================================
+// LAUNCH  (one capped event; the cap is defended by an atomic seatsRemaining)
+// ===========================================================================
+
+enum RegistrationStatus {
+  CONFIRMED
+  WAITLIST
+  CANCELLED
+}
+
+model LaunchEvent {
+  id               String    @id @default(cuid())
+  slug             String    @unique
+  title            String
+  description      String?
+  /// Unknown at build time.
+  venue            String?
+  /// Unknown at build time.
+  startsAt         DateTime?
+  /// Fixed cap (200). Reference value — never mutated by registration.
+  capacity         Int
+  /// Decremented atomically per confirmed seat. NEVER derived by counting
+  /// Registration rows — a count-then-insert oversells the event.
+  seatsRemaining   Int
+  registrationOpen Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  registrations Registration[]
+}
+
+model Registration {
+  id            String             @id @default(cuid())
+  eventId       String
+  event         LaunchEvent        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  /// Delegate ticket code — shown on the ticket and typed / read at the door.
+  code          String             @unique
+  name          String
+  email         String
+  phone         String
+  status        RegistrationStatus @default(CONFIRMED)
+  /// Set iff status = WAITLIST. Lowest rank = head of the queue.
+  waitlistRank  Int?
+  checkedInAt   DateTime?
+  checkedInById String?
+  checkedInBy   User?              @relation("RegistrationCheckedInBy", fields: [checkedInById], references: [id], onDelete: SetNull)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  /// One row per email per event. A CANCELLED row is revived on
+  /// re-registration rather than blocking the email forever.
+  @@unique([eventId, email])
+  @@index([eventId, status, waitlistRank])
+  @@index([eventId, name])
+}
+
+// ===========================================================================
+// ORDERS  (a cart may mix PRINT + EBOOK. Payment is manual mobile money.)
+//   Two state machines: PaymentState on Order, FulfilmentState on OrderItem.
+// ===========================================================================
+
+enum PaymentState {
+  PENDING
+  SUBMITTED
+  CONFIRMED
+  REJECTED
+  UNDERPAID
+  EXPIRED
+  CANCELLED
+  REFUNDED
+}
+
+enum FulfilmentState {
+  /// Payment not confirmed yet (both formats).
+  NOT_STARTED
+  /// EBOOK: download token issued and emailed.
+  DELIVERED_DIGITAL
+  /// PRINT: confirmed, in the packing queue.
+  AWAITING_PACKING
+  /// PRINT: packed, ready to go.
+  PACKED
+  /// PRINT: with the courier / out for delivery.
+  DISPATCHED
+  /// PRINT: buyer has it.
+  DELIVERED
+  /// PRINT: failed delivery, returned to sender.
+  RETURNED
+}
+
+enum DeliveryZone {
+  LUSAKA
+  REST_OF_ZAMBIA
+}
+
+enum MobileNetwork {
+  AIRTEL
+  MTN
+  ZAMTEL
+}
+
+enum ActorType {
+  SYSTEM
+  BUYER
+  ADMIN
+}
+
+enum ClaimStatus {
+  PENDING_REVIEW
+  ACCEPTED
+  REJECTED
+  DUPLICATE_FLAGGED
+}
+
+model Order {
+  id                 String       @id @default(cuid())
+  /// Human-readable reference (YC-7K3M9). Typed into a phone keypad and read
+  /// aloud, so short + unambiguous matters more than entropy.
+  reference          String       @unique
+  /// Opaque magic-link token for the status / payment-instructions page.
+  accessToken        String       @unique
+  customerName       String
+  customerEmail      String
+  customerPhone      String
+  /// Captured for order-creation rate limiting (spec 5.12).
+  creationIp         String?
+
+  currency           String       @default("ZMW")
+  subtotalMinor      Int
+  deliveryMinor      Int          @default(0)
+  totalMinor         Int
+
+  paymentState       PaymentState @default(PENDING)
+  /// Absolute expiry. The window is generous (~48h), not minutes.
+  paymentExpiresAt   DateTime
+  paymentConfirmedAt DateTime?
+
+  /// Set iff the order contains a PRINT item.
+  deliveryZone       DeliveryZone?
+  deliveryAddress    String?
+
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  items            OrderItem[]
+  claims           PaymentClaim[]
+  events           OrderEvent[]
+  downloadTokens   DownloadToken[]
+  notifications    Notification[]
+  flags            Flag[]
+  unmatchedMatches UnmatchedPayment[] @relation("UnmatchedMatchedOrder")
+
+  @@index([paymentState, createdAt])
+  @@index([customerEmail])
+}
+
+model OrderItem {
+  id             String          @id @default(cuid())
+  orderId        String
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bookFormatId   String
+  /// Restrict: a sold format cannot be deleted out from under order history.
+  bookFormat     BookFormat      @relation(fields: [bookFormatId], references: [id], onDelete: Restrict)
+
+  /// Book title copied at purchase time — never rendered from Book live.
+  titleSnapshot  String
+  /// Format copied at purchase time.
+  formatSnapshot BookFormatType
+  /// Unit price AT purchase time — never read live from BookFormat.
+  unitPriceMinor Int
+  currency       String          @default("ZMW")
+  quantity       Int
+
+  fulfilmentState FulfilmentState @default(NOT_STARTED)
+  dispatchedAt    DateTime?
+  trackingNote    String?
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  downloadTokens DownloadToken[]
+
+  @@index([fulfilmentState])
+  @@index([orderId])
+}
+
+model PaymentClaim {
+  id                 String          @id @default(cuid())
+  orderId            String
+  order              Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  network            MobileNetwork
+  senderPhone        String
+  /// Transaction reference exactly as the buyer typed it — shown to the admin.
+  transactionId      String
+  /// Normalised reference (uppercased, alphanumerics only) — matched on.
+  transactionIdNorm  String
+  /// Cloudinary URL, private, admin-only.
+  receiptImageUrl    String?
+
+  status             ClaimStatus     @default(PENDING_REVIEW)
+  reviewedById       String?
+  reviewedBy         User?           @relation("ClaimReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt         DateTime?
+  /// Code from the fixed, customer-safe rejection-reason list.
+  rejectionReason    String?
+  /// Free text. Mandatory when confirming an overpayment.
+  reviewNote         String?
+  /// The amount the admin actually observed in the mobile money account.
+  matchedAmountMinor Int?
+  /// Which configured merchant number the payment landed on.
+  merchantNumberId   String?
+  merchantNumber     MerchantNumber? @relation(fields: [merchantNumberId], references: [id], onDelete: SetNull)
+
+  /// True when this claim tops up a previously UNDERPAID order.
+  isTopUp            Boolean         @default(false)
+
+  /// Captured for per-IP / per-email rate limiting.
+  ipAddress          String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  unmatchedPayment   UnmatchedPayment? @relation("UnmatchedResolvedClaim")
+
+  /// The duplicate-reference defence. Normalisation is what makes it work.
+  @@unique([network, transactionIdNorm])
+  @@index([status, createdAt])
+  @@index([orderId])
+}
+
+/// Append-only audit log. Never updated, never deleted.
+model OrderEvent {
+  id        String     @id @default(cuid())
+  orderId   String
+  order     Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// e.g. payment.confirmed, claim.duplicate_attempt, email.sent
+  type      String
+  fromState String?
+  toState   String?
+  actorType ActorType
+  /// User.id when actorType = ADMIN; null or a system identifier otherwise.
+  actorId   String?
+  metadata  Json?
+  createdAt DateTime   @default(now())
+
+  @@index([orderId, createdAt])
+  @@index([type, createdAt])
+}
+
+// ===========================================================================
+// EBOOK DELIVERY
+// ===========================================================================
+
+model DownloadToken {
+  id            String    @id @default(cuid())
+  /// Opaque token embedded in the signed download URL.
+  token         String    @unique
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItemId   String
+  orderItem     OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  /// ~24h. Regenerable from the order status page via magic link.
+  expiresAt     DateTime
+  maxDownloads  Int       @default(5)
+  /// Incremented server-side on each successful download.
+  downloadCount Int       @default(0)
+  /// Set on CONFIRMED -> REFUNDED to revoke access immediately.
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  logs DownloadLog[]
+
+  @@index([orderId])
+}
+
+model DownloadLog {
+  id              String        @id @default(cuid())
+  downloadTokenId String
+  downloadToken   DownloadToken @relation(fields: [downloadTokenId], references: [id], onDelete: Cascade)
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime      @default(now())
+
+  @@index([downloadTokenId, createdAt])
+}
+
+// ===========================================================================
+// PAYMENT CONFIG + RECONCILIATION + OPS
+// ===========================================================================
+
+model MerchantNumber {
+  id          String        @id @default(cuid())
+  network     MobileNetwork
+  number      String
+  /// Name registered on the mobile money account.
+  accountName String?
+  /// e.g. "primary", "secondary personal line".
+  label       String?
+  isActive    Boolean       @default(true)
+  /// The number shown on the instructions page for this network.
+  isPrimary   Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  claims            PaymentClaim[]
+  unmatchedPayments UnmatchedPayment[]
+
+  @@unique([network, number])
+  @@index([network, isActive])
+}
+
+/// Money observed in the account with no matching order yet (spec 5.8 / admin
+/// 6.3). On reconciliation it links to the PaymentClaim it spawned against the
+/// matched order.
+model UnmatchedPayment {
+  id                String          @id @default(cuid())
+  network           MobileNetwork
+  senderPhone       String?
+  transactionId     String
+  transactionIdNorm String
+  amountMinor       Int
+  currency          String          @default("ZMW")
+  /// When the payment hit the account.
+  observedAt        DateTime
+  merchantNumberId  String?
+  merchantNumber    MerchantNumber? @relation(fields: [merchantNumberId], references: [id], onDelete: SetNull)
+  note              String?
+
+  recordedById      String
+  recordedBy        User            @relation("UnmatchedRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  matchedOrderId    String?
+  matchedOrder      Order?          @relation("UnmatchedMatchedOrder", fields: [matchedOrderId], references: [id], onDelete: SetNull)
+  matchedClaimId    String?         @unique
+  matchedClaim      PaymentClaim?   @relation("UnmatchedResolvedClaim", fields: [matchedClaimId], references: [id], onDelete: SetNull)
+  matchedAt         DateTime?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([network, transactionIdNorm])
+  @@index([matchedOrderId])
+}
+
+/// Operational signals surfaced on the admin Flags screen (spec 5.1 / 6.5).
+/// `type` and `severity` are strings, not enums, because the category set is
+/// expected to grow as signals accumulate.
+model Flag {
+  id             String    @id @default(cuid())
+  /// e.g. claim.duplicate_attempt, ratelimit.hit, download.anomaly
+  type           String
+  /// info | warn | high
+  severity       String    @default("info")
+  orderId        String?
+  order          Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  /// The other order involved in a duplicate-reference attempt.
+  relatedOrderId String?
+  email          String?
+  ipAddress      String?
+  detail         Json?
+  resolvedAt     DateTime?
+  resolvedById   String?
+  resolvedBy     User?     @relation("FlagResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+
+  @@index([type, resolvedAt, createdAt])
+}
+
+// ===========================================================================
+// TRANSACTIONAL EMAIL  (send-once dedupe + bounce visibility — spec 7, rule 4)
+// ===========================================================================
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+  BOUNCED
+}
+
+model Notification {
+  id                String             @id @default(cuid())
+  orderId           String?
+  order             Order?             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  channel           String             @default("email")
+  /// e.g. order.created, payment.confirmed, payment.rejected
+  type              String
+  recipient         String
+  /// `${orderId}:${type}` — the send-once idempotency key (rule 4).
+  idempotencyKey    String             @unique
+  /// Message id returned by Resend / Brevo.
+  providerMessageId String?
+  status            NotificationStatus @default(QUEUED)
+  error             String?
+  createdAt         DateTime           @default(now())
+  sentAt            DateTime?
+
+  @@index([status, createdAt])
+}
+
+// ===========================================================================
+// LIST + LEADS
+// ===========================================================================
+
+enum SubscriberStatus {
+  PENDING
+  SUBSCRIBED
+  UNSUBSCRIBED
+}
+
+model NewsletterSubscriber {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String?
+  status           SubscriberStatus @default(PENDING)
+  /// Which page / form captured the subscriber.
+  source           String?
+  unsubscribeToken String           @unique @default(cuid())
+  confirmedAt      DateTime?
+  unsubscribedAt   DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+enum EnquiryType {
+  ADVISORY
+  SPEAKING
+}
+
+enum EnquiryStatus {
+  NEW
+  IN_PROGRESS
+  CLOSED
+}
+
+model Enquiry {
+  id           String        @id @default(cuid())
+  type         EnquiryType
+  name         String
+  email        String
+  phone        String?
+  organisation String?
+  message      String
+  /// Provisional event date for SPEAKING enquiries.
+  eventDate    DateTime?
+  status       EnquiryStatus @default(NEW)
+  handledById  String?
+  handledBy    User?         @relation("EnquiryHandledBy", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt    DateTime?
+  ipAddress    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([type, status, createdAt])
+}
