@@ -139,6 +139,15 @@ export function listMerchantNumbers(): Promise<MerchantNumber[]> {
   });
 }
 
+/** The numbers shown to buyers on the payment instructions page: one per
+ *  network, active and marked primary. */
+export function getActivePrimaryMerchantNumbers(): Promise<MerchantNumber[]> {
+  return db.merchantNumber.findMany({
+    where: { isActive: true, isPrimary: true },
+    orderBy: { network: "asc" },
+  });
+}
+
 export function getMerchantNumber(id: string): Promise<MerchantNumber | null> {
   return db.merchantNumber.findUnique({ where: { id } });
 }

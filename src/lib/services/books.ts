@@ -309,6 +309,24 @@ export function cheapestAvailableFormat(book: BookWithFormats): BookFormat | nul
   );
 }
 
+export type PurchasableFormat = BookFormat & { book: Book };
+
+/**
+ * Checkout lookup. Null when the format is unknown, unavailable, or its book is
+ * unpublished — those all 404 the checkout page. Stock is NOT checked here: it
+ * can change between page load and submit, and createOrder() is the real gate.
+ */
+export async function getPurchasableBookFormat(
+  id: string,
+): Promise<PurchasableFormat | null> {
+  const format = await db.bookFormat.findUnique({
+    where: { id },
+    include: { book: true },
+  });
+  if (!format || !format.isAvailable || !format.book.published) return null;
+  return format;
+}
+
 // --- writes --------------------------------------------------------
 
 export async function createBook(draft: BookDraft): Promise<BookWriteResult> {

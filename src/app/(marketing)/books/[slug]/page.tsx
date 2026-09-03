@@ -151,18 +151,14 @@ function FormatCard({
       {outOfStock ? (
         <p className="mt-4 text-sm font-medium text-ink">Currently out of stock</p>
       ) : (
-        <>
-          {/* Inert until the cart slice. `disabled` real button; the `!` forces
-              the colour past globals.css's unlayered `:where(button){color:inherit}`. */}
-          <button
-            type="button"
-            disabled
-            className="mt-4 w-full cursor-not-allowed rounded border border-border px-4 py-2 text-sm font-medium text-ink-muted!"
-          >
-            Buy the {label.toLowerCase()}
-          </button>
-          <p className="mt-2 text-xs text-ink-muted">Checkout opens soon.</p>
-        </>
+        // `text-ink-inverse!` — the `!` forces the colour past globals.css's
+        // unlayered `:where(button){color:inherit}` reset.
+        <Link
+          href={`/checkout?format=${format.id}`}
+          className="mt-4 block w-full rounded bg-surface-inverse px-4 py-2 text-center text-sm font-medium text-ink-inverse!"
+        >
+          Buy the {label.toLowerCase()}
+        </Link>
       )}
     </div>
   );
