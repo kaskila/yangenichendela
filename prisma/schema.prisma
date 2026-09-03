@@ -253,6 +253,9 @@ enum FulfilmentState {
 enum DeliveryZone {
   LUSAKA
   REST_OF_ZAMBIA
+  /// Loosely named — collection is an option, not a zone — but there is no data
+  /// yet and renaming the enum is churn. Address is not collected for PICKUP.
+  PICKUP
 }
 
 enum MobileNetwork {
@@ -450,6 +453,11 @@ model DownloadLog {
 // PAYMENT CONFIG + RECONCILIATION + OPS
 // ===========================================================================
 
+enum MerchantAccountType {
+  PERSONAL
+  MERCHANT
+}
+
 model MerchantNumber {
   id          String        @id @default(cuid())
   network     MobileNetwork
@@ -458,6 +466,9 @@ model MerchantNumber {
   accountName String?
   /// e.g. "primary", "secondary personal line".
   label       String?
+  /// Personal-wallet vs registered-merchant payments are different handset
+  /// flows, so the instructions page must be able to branch on this.
+  accountType MerchantAccountType @default(PERSONAL)
   isActive    Boolean       @default(true)
   /// The number shown on the instructions page for this network.
   isPrimary   Boolean       @default(false)
@@ -469,6 +480,18 @@ model MerchantNumber {
 
   @@unique([network, number])
   @@index([network, isActive])
+}
+
+/// Single row (id = "singleton"). Typed columns, not key-value, so the admin
+/// form stays trivial and every read is type-safe. No pickupAddress column —
+/// the collection address is deliberately not public.
+model StoreSettings {
+  id                  String   @id @default("singleton")
+  /// Flat delivery fee for Lusaka, integer minor units (ngwee). Rest-of-Zambia
+  /// and PICKUP are always zero (buyer arranges / collects), so they need no
+  /// column.
+  deliveryLusakaMinor Int      @default(5000)
+  updatedAt           DateTime @updatedAt
 }
 
 /// Money observed in the account with no matching order yet (spec 5.8 / admin
