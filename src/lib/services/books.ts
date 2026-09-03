@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { Prisma } from "@/generated/prisma/client";
 import type { Book, BookFormat, BookFormatType } from "@/generated/prisma/client";
 import { parseKwachaToMinor } from "@/lib/money";
+import { isUniqueViolationOn } from "@/lib/prisma-errors";
 import { slugify } from "@/lib/slug";
 
 // Book management service. Mirrors src/lib/services/registration.ts: a Zod schema
@@ -225,29 +225,7 @@ function flattenIssues(error: z.ZodError): FieldIssues {
 // --- helpers -----------------------------------------------------------
 
 function isSlugCollision(error: unknown): boolean {
-  if (
-    !(error instanceof Prisma.PrismaClientKnownRequestError) ||
-    error.code !== "P2002"
-  ) {
-    return false;
-  }
-  // Prisma 7 + the pg driver adapter does not populate `meta.target`; the
-  // constraint name lands in `meta.driverAdapterError.cause` and in the message.
-  const meta = error.meta as
-    | { target?: unknown; driverAdapterError?: { cause?: unknown } }
-    | undefined;
-  const cause = meta?.driverAdapterError?.cause as
-    | { constraint?: { index?: string }; originalMessage?: string }
-    | undefined;
-  const haystack = [
-    String(meta?.target ?? ""),
-    cause?.constraint?.index ?? "",
-    cause?.originalMessage ?? "",
-    error.message,
-  ]
-    .join(" ")
-    .toLowerCase();
-  return haystack.includes("slug");
+  return isUniqueViolationOn(error, "slug");
 }
 
 function formatCreateData(type: BookFormatType, v: ValidFormat) {

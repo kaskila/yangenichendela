@@ -28,22 +28,40 @@ export default async function OrderStatusPage({
   const order = await loadOrderOr404(reference, token);
   const t = token as string;
 
+  const justSubmitted = sp.submitted === "1" && order.paymentState === "SUBMITTED";
+
   return (
     <main className="mx-auto max-w-md px-4 py-10">
       <h1 className="text-title font-semibold text-ink">
         Order {order.reference}
       </h1>
 
+      {justSubmitted ? (
+        <p
+          role="status"
+          className="mt-3 rounded border border-border bg-surface-raised px-3 py-2 text-sm text-ink"
+        >
+          Thanks — we&rsquo;ve got your payment reference.
+        </p>
+      ) : null}
+
       <p className="mt-3 rounded border border-border bg-surface-raised px-3 py-2 text-sm font-medium text-ink">
         {PAYMENT_STATE_TEXT[order.paymentState] ?? "Being handled"}
       </p>
 
-      {order.paymentState === "PENDING" ? (
+      {order.paymentState === "SUBMITTED" ? (
+        <p className="mt-2 text-sm text-ink-muted">
+          Yangeni checks payments by hand — usually within a day. You&rsquo;ll
+          hear once it&rsquo;s confirmed; it isn&rsquo;t instant.
+        </p>
+      ) : null}
+
+      {order.paymentState === "PENDING" || order.paymentState === "REJECTED" ? (
         <Link
           href={`/orders/${order.reference}/pay?t=${encodeURIComponent(t)}`}
           className="mt-3 inline-block rounded bg-surface-inverse px-4 py-2 text-sm font-medium text-ink-inverse!"
         >
-          How to pay
+          {order.paymentState === "REJECTED" ? "Send your reference again" : "How to pay"}
         </Link>
       ) : null}
 

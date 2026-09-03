@@ -8,7 +8,12 @@ import {
   loadOrderOr404,
   PAYMENT_STATE_TEXT,
 } from "../order-access";
+import { ClaimForm } from "./claim-form";
 import { CopyButton } from "./copy-button";
+
+// PaymentState values a claim can still be submitted from — the states
+// LEGAL_PAYMENT_TRANSITIONS allows PaymentState -> SUBMITTED from.
+const CLAIMABLE = new Set(["PENDING", "REJECTED", "EXPIRED"]);
 
 export const dynamic = "force-dynamic";
 
@@ -148,7 +153,7 @@ export default async function PayPage({
 
   const statusHref = `/orders/${order.reference}?t=${encodeURIComponent(t)}`;
 
-  if (order.paymentState !== "PENDING") {
+  if (!CLAIMABLE.has(order.paymentState)) {
     return (
       <main className="mx-auto max-w-md px-4 py-10">
         <h1 className="text-title font-semibold text-ink">Order {order.reference}</h1>
@@ -162,6 +167,13 @@ export default async function PayPage({
       </main>
     );
   }
+
+  const stateBanner =
+    order.paymentState === "REJECTED"
+      ? "A previous reference couldn't be matched. Check it against your SMS and send it again."
+      : order.paymentState === "EXPIRED"
+        ? "This order's payment window has passed — you can still pay, and Yangeni will reopen it."
+        : null;
 
   const numbers = await getActivePrimaryMerchantNumbers();
   const byNetwork = new Map<NetworkKey, MerchantNumber>();
@@ -184,6 +196,12 @@ export default async function PayPage({
       <p className="mt-2 text-sm text-ink-muted">
         Order <span className="tabular font-medium text-ink">{order.reference}</span>
       </p>
+
+      {stateBanner ? (
+        <p className="mt-4 rounded border border-border bg-surface-raised px-3 py-2 text-sm text-ink">
+          {stateBanner}
+        </p>
+      ) : null}
 
       {byNetwork.size === 0 ? (
         <p className="mt-6 rounded border border-border bg-surface-raised p-4 text-sm text-ink">
@@ -225,6 +243,7 @@ export default async function PayPage({
           order={order}
           network={chosen!}
           merchant={chosenNumber}
+          token={t}
           amountDisplay={amountDisplay}
           amountCopy={amountCopy}
           statusHref={statusHref}
@@ -239,6 +258,7 @@ function PayInstructions({
   order,
   network,
   merchant,
+  token,
   amountDisplay,
   amountCopy,
   statusHref,
@@ -247,6 +267,7 @@ function PayInstructions({
   order: Awaited<ReturnType<typeof loadOrderOr404>>;
   network: NetworkKey;
   merchant: MerchantNumber;
+  token: string;
   amountDisplay: string;
   amountCopy: string;
   statusHref: string;
@@ -349,6 +370,12 @@ function PayInstructions({
           {statusHref}
         </Link>
       </div>
+
+      <ClaimForm
+        orderReference={order.reference}
+        accessToken={token}
+        defaultNetwork={network}
+      />
     </section>
   );
 }
