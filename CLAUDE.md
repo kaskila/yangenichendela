@@ -323,9 +323,9 @@ unilateral edit. Do not refactor code you were not asked to touch.
 
 1. Auth seam ✅
 2. Registration service ✅ (dormant)
-3. Admin shell + books CRUD ← **current**
-4. Public book catalogue and detail pages
-5. `transitionPayment()` + tests
+3. Admin shell + books CRUD ✅ (Done)
+4. Public book catalogue and detail pages ✅ (Done)
+5. `transitionPayment()` + tests **current**
 6. Cart, checkout, order creation, payment instructions
 7. Claim submission + normalisation + rate limits
 8. Admin payment queue + claim review
