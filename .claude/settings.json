@@ -10,7 +10,8 @@
       "Bash(node -e \"try{require.resolve\\('@better-auth/core/db'\\);console.log\\('yes @better-auth/core/db'\\)}catch\\(e\\){console.log\\('no',e.message\\)}\")",
       "Bash(node -e \"const p=require\\('./node_modules/better-auth/package.json'\\); console.log\\(!!p.exports['./api']\\)\")",
       "Bash(echo \"LINT EXIT $?\")",
-      "Bash(npx tsx *)"
+      "Bash(npx tsx *)",
+      "Bash(node -e ' *)"
     ]
   }
 }

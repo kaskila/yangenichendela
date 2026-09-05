@@ -9,10 +9,15 @@ const nextConfig: NextConfig = {
     // sign-in for someone not signed in at all).
     authInterrupts: true,
     serverActions: {
-      // Cover-image uploads go through a server action; the default 1 MB body
-      // limit is below a typical cover. Keep it modest — uploadCoverImage()
-      // rejects anything over 5 MB itself.
-      bodySizeLimit: "6mb",
+      // Cover images are 5 MB max; ebook PDFs (uploadEbookFile) are 9 MB max
+      // — verified live against this Cloudinary account, whose raw-resource
+      // uploads reject anything over ~10 MB regardless of what's configured
+      // here. 14 MB gives headroom for base64 upload inflation (~33%) plus
+      // multipart overhead. NOTE: if this deploys on Vercel, serverless
+      // functions enforce their own ~4.5 MB request/response body ceiling
+      // regardless of this setting — this config can't override a platform
+      // limit.
+      bodySizeLimit: "14mb",
     },
   },
 };

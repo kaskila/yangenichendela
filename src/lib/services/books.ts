@@ -384,3 +384,14 @@ export async function updateBook(
 export async function setBookCover(id: string, coverImageUrl: string): Promise<void> {
   await db.book.update({ where: { id }, data: { coverImageUrl } });
 }
+
+/** Attach a private ebook PDF to an existing EBOOK BookFormat row. There is
+ *  no "create the format" branch here — the row must already exist (saved
+ *  via BookForm first), same dependency the cover panel doesn't have because
+ *  Book itself always exists. */
+export async function setEbookAsset(
+  bookFormatId: string,
+  ebookAssetUrl: string,
+): Promise<void> {
+  await db.bookFormat.update({ where: { id: bookFormatId }, data: { ebookAssetUrl } });
+}

@@ -6,10 +6,12 @@ import { requireAdmin } from "@/lib/auth/guards";
 import {
   isCloudinaryConfigured,
   uploadCoverImage,
+  uploadEbookFile,
 } from "@/lib/cloudinary";
 import {
   createBook,
   setBookCover,
+  setEbookAsset,
   updateBook,
   type BookDraft,
   type FieldIssues,
@@ -141,5 +143,35 @@ export async function uploadCoverAction(
   }
 
   revalidateBook(id);
+  return { status: "saved" };
+}
+
+export async function uploadEbookAction(
+  _prev: CoverFormState,
+  formData: FormData,
+): Promise<CoverFormState> {
+  await requireAdmin();
+
+  if (!isCloudinaryConfigured()) {
+    // No degraded "paste a URL" fallback here, unlike covers — a pasted URL
+    // can't be `type: authenticated`, which would defeat the whole point of
+    // keeping the ebook private.
+    return { status: "error", error: "Ebook uploads are not configured." };
+  }
+
+  const bookFormatId = str(formData, "bookFormatId");
+  if (!bookFormatId) return { status: "error", error: "Missing ebook format reference." };
+
+  const bookId = str(formData, "bookId");
+  const file = formData.get("ebook");
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", error: "Choose a PDF file to upload." };
+  }
+
+  const uploaded = await uploadEbookFile(file);
+  if (!uploaded.ok) return { status: "error", error: uploaded.error };
+  await setEbookAsset(bookFormatId, uploaded.url);
+
+  revalidateBook(bookId);
   return { status: "saved" };
 }

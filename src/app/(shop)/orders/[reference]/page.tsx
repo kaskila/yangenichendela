@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { formatMinor } from "@/lib/money";
-import { loadOrderOr404, PAYMENT_STATE_TEXT } from "./order-access";
+import { getDownloadInfoForItem } from "@/lib/services/fulfilment";
+import { formatExpiryLusaka, loadOrderOr404, PAYMENT_STATE_TEXT } from "./order-access";
+import { DownloadSection } from "./download-section";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +31,17 @@ export default async function OrderStatusPage({
   const t = token as string;
 
   const justSubmitted = sp.submitted === "1" && order.paymentState === "SUBMITTED";
+
+  const ebookItems = order.items.filter((item) => item.formatSnapshot === "EBOOK");
+  const downloads =
+    order.paymentState === "CONFIRMED"
+      ? await Promise.all(
+          ebookItems.map(async (item) => ({
+            item,
+            info: await getDownloadInfoForItem(item.id),
+          })),
+        )
+      : [];
 
   return (
     <main className="mx-auto max-w-md px-4 py-10">
@@ -115,6 +128,25 @@ export default async function OrderStatusPage({
           </p>
         ) : null}
       </section>
+
+      {downloads.length > 0 ? (
+        <section className="mt-8 space-y-3">
+          <h2 className="text-lg font-semibold text-ink">Your ebook</h2>
+          {downloads.map(({ item, info }) => (
+            <DownloadSection
+              key={item.id}
+              orderReference={order.reference}
+              accessToken={t}
+              orderItemId={item.id}
+              title={item.titleSnapshot}
+              usable={info?.usable ?? false}
+              downloadHref={info ? `/api/downloads/${info.token}` : "#"}
+              expiresAtLabel={info ? formatExpiryLusaka(info.expiresAt) : ""}
+              downloadsRemaining={info?.downloadsRemaining ?? 0}
+            />
+          ))}
+        </section>
+      ) : null}
 
       <p className="mt-8 text-xs text-ink-muted">
         Bookmark this page — it is your record of the order until confirmation
