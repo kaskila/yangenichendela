@@ -41,7 +41,6 @@ export function ClaimForm({
   return (
     <form
       action={action}
-      // encType="multipart/form-data"
       className="mt-6 space-y-5 rounded-lg border border-border p-4"
     >
       <div>
