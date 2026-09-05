@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { formatMinor } from "@/lib/money";
 import { getDownloadInfoForItem } from "@/lib/services/fulfilment";
-import { formatExpiryLusaka, loadOrderOr404, PAYMENT_STATE_TEXT } from "./order-access";
+import {
+  formatExpiryLusaka,
+  fulfilmentLine,
+  loadOrderOr404,
+  PAYMENT_STATE_TEXT,
+} from "./order-access";
 import { DownloadSection } from "./download-section";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +37,7 @@ export default async function OrderStatusPage({
 
   const justSubmitted = sp.submitted === "1" && order.paymentState === "SUBMITTED";
 
+  const printItems = order.items.filter((item) => item.formatSnapshot === "PRINT");
   const ebookItems = order.items.filter((item) => item.formatSnapshot === "EBOOK");
   const downloads =
     order.paymentState === "CONFIRMED"
@@ -128,6 +134,25 @@ export default async function OrderStatusPage({
           </p>
         ) : null}
       </section>
+
+      {order.paymentState === "CONFIRMED" && printItems.length > 0 ? (
+        <section className="mt-8 space-y-2">
+          <h2 className="text-lg font-semibold text-ink">Your paperback</h2>
+          <ul className="space-y-2 text-sm">
+            {printItems.map((item) => (
+              <li key={item.id} className="flex justify-between gap-4">
+                <span className="text-ink">
+                  {item.titleSnapshot}
+                  {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                </span>
+                <span className="text-ink-muted">
+                  {fulfilmentLine(item.fulfilmentState, order.deliveryZone)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {downloads.length > 0 ? (
         <section className="mt-8 space-y-3">

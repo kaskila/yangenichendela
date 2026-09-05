@@ -21,9 +21,9 @@ export default async function AdminSectionLayout({
       {/* The only brand element in the whole admin. Decorative (no text), but
           it carries an explicit on-dark foreground so anything ever placed in
           it stays legible rather than inheriting the dark admin ink. */}
-      <div className="h-1 bg-surface-inverse text-admin-on-dark" />
+      <div className="no-print h-1 bg-surface-inverse text-admin-on-dark" />
 
-      <header className="border-b border-admin-border bg-admin-surface">
+      <header className="no-print border-b border-admin-border bg-admin-surface">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-2">
           <span className="font-semibold">Admin</span>
           <div className="flex min-w-0 items-center gap-3">

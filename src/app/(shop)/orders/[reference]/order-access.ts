@@ -26,6 +26,30 @@ export const PAYMENT_STATE_TEXT: Record<string, string> = {
   REFUNDED: "This order was refunded",
 };
 
+// Buyer-facing fulfilment status for a PRINT item, in plain language. Only ever
+// shown once the payment is CONFIRMED. For PICKUP and REST_OF_ZAMBIA the item
+// never goes "with a courier" — "dispatched" means Yangeni handed it over.
+export function fulfilmentLine(
+  state: string,
+  zone: string | null,
+): string | null {
+  switch (state) {
+    case "AWAITING_PACKING":
+    case "PACKED":
+      return "Being packed";
+    case "DISPATCHED":
+      if (zone === "PICKUP") return "Ready to collect";
+      if (zone === "REST_OF_ZAMBIA") return "Handed to your courier";
+      return "On its way";
+    case "DELIVERED":
+      return "Delivered";
+    case "RETURNED":
+      return "Delivery didn't work out — he'll be in touch";
+    default:
+      return null;
+  }
+}
+
 const TZ = "Africa/Lusaka"; // audience is in Zambia; diaspora is phase two
 
 function dayKey(d: Date): string {

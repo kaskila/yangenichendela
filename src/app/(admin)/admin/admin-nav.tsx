@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/books", label: "Books" },
   { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/fulfilment", label: "Packing" },
   { href: "/admin/settings", label: "Settings" },
 ] as const;
 
@@ -24,9 +25,9 @@ export function AdminNav() {
   return (
     <nav
       aria-label="Admin sections"
-      className="border-b border-admin-border bg-admin-surface"
+      className="no-print border-b border-admin-border bg-admin-surface"
     >
-      <div className="mx-auto flex w-full max-w-3xl">
+      <div className="mx-auto flex w-full max-w-3xl overflow-x-auto">
         {LINKS.map((link) => {
           const active = isActive(pathname, link.href);
           return (
