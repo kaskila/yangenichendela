@@ -150,7 +150,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       {/* The books, given room — pulled live, published only. */}
       {books.length > 0 ? (
         <section className="mx-auto w-full max-w-5xl px-4 py-12">
-          <h2 className="text-title font-semibold text-ink">Books</h2>
+          <h2 className="text-title font-semibold text-ink">The books</h2>
           <ul className="mt-8 grid gap-8 sm:grid-cols-2">
             {books.map((book) => {
               const cheapest = cheapestAvailableFormat(book);
